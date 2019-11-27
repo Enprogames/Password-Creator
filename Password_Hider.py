@@ -109,7 +109,7 @@ class File_Reader:
         contents = self.read_file_data()
         data = base64.b64encode(data.encode('utf-8')).decode('utf-8')
         file = open(self.url, 'a', encoding='utf-8')
-        if self.read_file_data() == None:
+        if len(contents) == 0:
             file.write(data)
         else:
             file.write(base64.b64encode((contents + '\n' + data).encode('utf-8')).decode('utf-8'))
@@ -149,6 +149,7 @@ class User:
             
 
 def get_users():
+
     # structure of file:
     # [encrypted username, hashed password, websites and passwords]
     # websites and passwords:
@@ -161,10 +162,11 @@ def get_users():
     if not file_contents == None:
         for i in range(len(file_contents.split('\n'))):  # loops through each line in file
             users.append([])
-            for item in file_contents.split('\n')[i].split(','):
-                if not '[' in item:
+            for item in file_contents.split('\n')[i].split(','): # loops through each comma seperated element in the current line of the file
+                if not '[' in item: # if there is no square bracket, there is no website data for the user on this line
                     users[i].append(item.strip())
-                else:
+                    #print(users[i][0], simple_decrypt(users[i][0]))
+                else: # there is website data
                     website_args = file_contents.split('\n')[i][file_contents.split('\n')[i].index(item) + 2:-1].split(',')
                     website_args = [x.strip() for x in website_args]
                     users[i].append(website_args)
@@ -192,20 +194,17 @@ def simple_encrypt(x):
     x = list(str(x))
     output = ""
     for i in x:
+
         num = str(printable_chars.index(i))
-        if len(num) == 1:
-            output += '00' + num
-        elif len(num) == 2:
-            output += '0' + num
-        else:
-            output += num
+        output += num.zfill(3)
+
     return output
 
 
 def simple_decrypt(x):
     output = ""
     a = []
-    for i in range(len(x)):
+    for i in range(0, len(x)+1):
         if i % 3 == 0 and i > 0:
             a.append(x[i-3:i])
     for i in a:
@@ -227,10 +226,6 @@ def login_button():
     goto_frame(main_frame)
 
 
-def add_to_file(user_to_append):
-    text_file.append_line_file_data(user_to_append.encrypted_data())
-
-
 def register_button():
     global current_user
     username = register_frame.registerusernamebox.get()
@@ -245,16 +240,17 @@ def register_button():
     else:
         register_frame.registermessagelabel.config(text='user already exists', fg='grey25')
         for user in users:
+            #print(simple_decrypt(user.username), username, user.password, hashlib.md5(password.encode('utf-8')).hexdigest())
             if simple_decrypt(user.username) == username and user.password == hashlib.md5(password.encode('utf-8')).hexdigest():
-
+                print("user already exists")
                 register_frame.registermessagelabel.config(fg='white')
-                return # ends function if user exists
+                return # ends function if user already exists
 
         current_user = User(username, password)
         users.append(current_user)
         goto_frame(main_frame)
-        add_to_file(current_user)
-        print(current_user)
+        text_file.append_line_file_data(current_user.encrypted_data())
+        #print(current_user)
         #print(current_user.encrypted_data())
 
 def create_login_button():
@@ -285,6 +281,8 @@ def copy_new_password_button_command():
 
 printable_chars = []
 [printable_chars.append(chr(i)) for i in range(0,128)]
+
+#print(simple_encrypt("xXBroccoliLoverXx"))
 
 text_file = File_Reader('text.txt')
 file_contents = text_file.read_file_data()
