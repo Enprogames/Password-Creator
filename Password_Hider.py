@@ -1,10 +1,9 @@
 import tkinter as tk
-#import pyperclip
-import string
+import pyperclip
 import hashlib
-import base64
-import os
 
+user_seperator = "    "
+item_seperator = ", "
 
 class Login_Frame(tk.Frame):
 
@@ -39,6 +38,9 @@ class Login_Frame(tk.Frame):
         self.loginbutton = tk.Button(self, text="login", font=('consolas', 10, 'bold'), bg="white", fg="black", command=login_function)
         self.loginbutton.place(relx=.58, rely=.85, anchor="center")
 
+        self.usernamebox.insert(0, "xXBroccoliLoverXx")
+        self.passwordbox.insert(0, "p2ssw0rd1")
+
 
 class Register_Frame(tk.Frame):
 
@@ -62,21 +64,18 @@ class Register_Frame(tk.Frame):
         self.registerusernamelabel.place(relx=.5, rely=.4, anchor="center")
         self.registerusernamebox = tk.Entry(self)
         self.registerusernamebox.place(relx=.5, rely=.45, anchor="center")
-        self.registerusernamebox.insert(0, "xXBroccoliLoverXx")  # temporary for debugging
 
         self.registerpasswordlabel = tk.Label(self, text="Password", font=('consolas', 10, 'bold'), bg="grey25",
                                          fg="white")
         self.registerpasswordlabel.place(relx=.5, rely=.5, anchor="center")
         self.registerpasswordbox = tk.Entry(self)
         self.registerpasswordbox.place(relx=.5, rely=.55, anchor="center")
-        self.registerpasswordbox.insert(0, "p2ssw0rd1")  # temporary for debugging
 
         self.confirmpasswordlabel = tk.Label(self, text="Confirm Password", font=('consolas', 10, 'bold'),
                                         bg="grey25", fg="white")
         self.confirmpasswordlabel.place(relx=.5, rely=.6, anchor="center")
         self.confirmpasswordbox = tk.Entry(self, width="20")
         self.confirmpasswordbox.place(relx=.5, rely=.65, anchor="center")
-        self.confirmpasswordbox.insert(0, "p2ssw0rd1")  # temporary for debugging
 
         self.registerbutton = tk.Button(self, text="register", font=('consolas', 10, 'bold'), bg="white",
                                    fg="black", command=register_function)
@@ -86,6 +85,10 @@ class Register_Frame(tk.Frame):
                                         fg="black", command=goto_login_function)
         self.changetologinbutton.place(relx=.58, rely=.85, anchor="center")
 
+        self.registerusernamebox.insert(0, "xXBroccoliLoverXx")  # temporary for debugging
+        self.registerpasswordbox.insert(0, "p2ssw0rd1")  # temporary for debugging
+        self.confirmpasswordbox.insert(0, "p2ssw0rd1")  # temporary for debugging
+
 
 class File_Reader:
     def __init__(self, url):
@@ -93,7 +96,8 @@ class File_Reader:
 
     def read_file_data(self):
         file = open(self.url, 'r', encoding='utf-8')
-        contents = base64.b64decode(file.read()).decode('utf-8')
+        #contents = base64.b64decode(file.read().encode('utf-8')).decode('utf-8')
+        contents = file.read()
         #print(contents)
         file.close()
         if len(contents) == 0: return ""
@@ -102,18 +106,20 @@ class File_Reader:
     def write_file_data(self, data):
         file = open(self.url, 'w', encoding='utf-8')
         #print(data, base64.b64encode(data))
-        file.write(base64.b64encode(data.encode('utf-8')).decode('utf-8'))
+        #file.write(base64.b64encode(data.encode('utf-8')).decode('utf-8'))
+        file.write(data)
         file.close()
 
-    def append_line_file_data(self, data):
+    def append_file_data(self, data):
         contents = self.read_file_data()
-        data = base64.b64encode(data.encode('utf-8')).decode('utf-8')
-        file = open(self.url, 'a', encoding='utf-8')
+        file = open(self.url, 'w', encoding='utf-8')
         if len(contents) == 0:
+            #file.write(base64.b64encode(data.encode('utf-8')).decode('utf-8'))
             file.write(data)
         else:
-            file.write(base64.b64encode((contents + '\n' + data).encode('utf-8')).decode('utf-8'))
-        file.close
+            file.write(contents + user_seperator + data)
+            #file.write(base64.b64encode((contents + user_seperator + data).encode('utf-8')).decode('utf-8'))
+        file.close()
 
 
 class User:
@@ -132,12 +138,15 @@ class User:
     def get_username(self):
         return simple_decrypt(self.username)
 
+    def get_password(self):
+        return self.password
+
     def __str__(self):
         return "Username: " + self.username + " Password: " + self.password + " Websites: " + str(self.websites)
 
     def encrypted_data(self):
         if self.websites is None:
-            return str(simple_encrypt(self.username) + ', ' + hashlib.md5(self.password.encode('utf-8')).hexdigest())
+            return str(simple_encrypt(self.username) + item_seperator + hashlib.md5(self.password.encode('utf-8')).hexdigest())
         else:
             raw_website_data = "" # data in the websites as a string
             for website in self.websites: # loops through the array containing the data for the websites
@@ -145,7 +154,7 @@ class User:
                     raw_website_data += website
                     print(website)
 
-            return str(simple_encrypt(self.username) + ', ' + hashlib.md5(self.password.encode('utf-8')).hexdigest() + ' ,')
+            return str(simple_encrypt(self.username) + item_seperator + hashlib.md5(self.password.encode('utf-8')).hexdigest() + item_seperator)
             
 
 def get_users():
@@ -159,16 +168,20 @@ def get_users():
     username = ""
     password = ""
     websites = []
-    if not file_contents == None:
-        for i in range(len(file_contents.split('\n'))):  # loops through each line in file
+    if not file_contents == "":
+
+        for i in range(len(file_contents.split(user_seperator))):  # loops through each part of file separated by three spaces
             users.append([])
-            for item in file_contents.split('\n')[i].split(','): # loops through each comma seperated element in the current line of the file
+            for item in file_contents.split(user_seperator)[i].split(item_seperator): # loops through each comma seperated element in the current line of the file
+                line = file_contents.split(user_seperator)[i]
+
                 if not '[' in item: # if there is no square bracket, there is no website data for the user on this line
                     users[i].append(item.strip())
                     #print(users[i][0], simple_decrypt(users[i][0]))
                 else: # there is website data
-                    website_args = file_contents.split('\n')[i][file_contents.split('\n')[i].index(item) + 2:-1].split(',')
-                    website_args = [x.strip() for x in website_args]
+
+                    website_args = line[file_contents.split(user_seperator)[i].index(item) + 1:-1].split(item_seperator)
+                    website_args = [x.strip() for x in website_args] # strip each element in the website_args list
                     users[i].append(website_args)
                     break
 
@@ -220,14 +233,33 @@ def goto_frame(frame):
 
 
 def login_button():
+
+    global current_user
+
     username = login_frame.usernamebox.get()
     password = login_frame.passwordbox.get()
 
-    goto_frame(main_frame)
+    for user in users:
+        if username == '':
+            login_frame.loginmessageLabel.config(text = "Please Enter a Username", fg='white')
+        elif password == '':
+            login_frame.loginmessageLabel.config(text = "Please Enter a Password", fg='white')
+        elif not username == user.get_username() or not hashlib.md5(password.encode('utf-8')).hexdigest() == user.get_password(): # username or password is incorrect
+            login_frame.loginmessageLabel.config(text = "Username or Password Incorrect", fg='white')
+        else:
+            login_frame.loginmessageLabel.config(fg='grey25')
+            current_user = user
+            goto_frame(main_frame)
+            break
+
+    # remove this later
+    #goto_frame(main_frame)
 
 
 def register_button():
+
     global current_user
+
     username = register_frame.registerusernamebox.get()
     password = register_frame.registerpasswordbox.get()
     confirm_password = register_frame.confirmpasswordbox.get()
@@ -241,7 +273,7 @@ def register_button():
         register_frame.registermessagelabel.config(text='user already exists', fg='grey25')
         for user in users:
             #print(simple_decrypt(user.username), username, user.password, hashlib.md5(password.encode('utf-8')).hexdigest())
-            if simple_decrypt(user.username) == username and user.password == hashlib.md5(password.encode('utf-8')).hexdigest():
+            if simple_decrypt(user.username) == username:
                 print("user already exists")
                 register_frame.registermessagelabel.config(fg='white')
                 return # ends function if user already exists
@@ -249,7 +281,7 @@ def register_button():
         current_user = User(username, password)
         users.append(current_user)
         goto_frame(main_frame)
-        text_file.append_line_file_data(current_user.encrypted_data())
+        text_file.append_file_data(current_user.encrypted_data())
         #print(current_user)
         #print(current_user.encrypted_data())
 
@@ -261,34 +293,25 @@ def create_login_button():
     print(username)
 
 
-def copy(s):
-    if sys.platform == 'win32' or sys.platform == 'cygwin':
-        subprocess.Popen(['clip'], stdin=subprocess.PIPE).communicate(s)
-    else:
-        raise Exception('Platform not supported')
-
-
 def copy_username_button_command():
-    #pyperclip.copy(username_box.get())
-    copy(s)
-    os.system("echo '{}' | xclip -selection clipboard".format(username_box.get()))
+    pyperclip.copy(username_box.get())
 
 
 def copy_new_password_button_command():
-    #pyperclip.copy(new_password_box.get())
-    os.system("echo '{}' | xclip -selection clipboard".format(new_password_box.get()))
+    pyperclip.copy(new_password_box.get())
 
 
 printable_chars = []
 [printable_chars.append(chr(i)) for i in range(0,128)]
-
-#print(simple_encrypt("xXBroccoliLoverXx"))
 
 text_file = File_Reader('text.txt')
 file_contents = text_file.read_file_data()
 
 users = get_users() # All of the users in the text file
 current_user = None
+
+for i in users:
+    print(i)
 
 root = tk.Tk()
 width = 400
@@ -301,30 +324,40 @@ register_frame = Register_Frame(root, register_button, lambda: goto_frame(login_
 
 comic_sans=('Comic Sans MS', 12, 'bold italic')
 main_frame = tk.Frame(root, bg='grey25', width=width, height=height)
-main_frame_title_label = tk.Label(main_frame, text='Enter Website URL\n', fg='white', bg='grey25', font=comic_sans)
+main_frame_title_label = tk.Label(main_frame, text='Enter Website URL', fg='white', bg='grey25', font=comic_sans)
 main_frame_title_label.place(relx='0.5', rely='0.1', anchor='n')
 
 url_box_label = tk.Label(main_frame, text="URL", fg='white', bg='grey25')
-url_box_label.place(relx='0.5', rely='0.3', anchor='n')
+url_box_label.place(relx='0.5', rely='0.2', anchor='n')
 url_box = tk.Entry(main_frame)
-url_box.place(relx='0.5', rely='0.35', anchor='n')
+url_box.place(relx='0.5', rely='0.25', anchor='n')
+
+optimal_length_label = tk.Label(main_frame, text="Optimal Password Length", fg='white', bg='grey25')
+optimal_length_label.place(relx='0.5', rely='0.3', anchor='n')
+optimal_length_box = tk.Entry(main_frame)
+optimal_length_box.place(relx='0.5', rely='0.35', anchor='n')
+
+optimal_characters_label = tk.Label(main_frame, text="Password Characters", fg='white', bg='grey25')
+optimal_characters_label.place(relx='0.5', rely='0.4', anchor='n')
+optimal_characters_box = tk.Entry(main_frame)
+optimal_characters_box.place(relx='0.5', rely='0.45', anchor='n')
 
 create_login_button = tk.Button(main_frame, text='Create Login', fg='white', bg='grey25')
-create_login_button.place(relx='0.5', rely='0.45', anchor='n')
+create_login_button.place(relx='0.5', rely='0.55', anchor='n')
 
 username_box_label = tk.Label(main_frame, text='Username', fg='white', bg='grey25')
-username_box_label.place(relx='0.5', rely='0.55', anchor='n')
+username_box_label.place(relx='0.5', rely='0.65', anchor='n')
 username_box = tk.Entry(main_frame)
-username_box.place(relx='0.5', rely='0.6', anchor='n')
+username_box.place(relx='0.5', rely='0.7', anchor='n')
 copy_username_button = tk.Button(main_frame, text='Copy', fg='white', bg='grey25', command=copy_username_button_command)
-copy_username_button.place(relx='0.75', rely='0.59', anchor='n')
+copy_username_button.place(relx='0.75', rely='0.69', anchor='n')
 
 new_password_box_label = tk.Label(main_frame, text='New Password', fg='white', bg='grey25')
-new_password_box_label.place(relx='0.5', rely='0.65', anchor='n')
+new_password_box_label.place(relx='0.5', rely='0.75', anchor='n')
 new_password_box = tk.Entry(main_frame)
-new_password_box.place(relx='0.5', rely='0.7', anchor='n')
+new_password_box.place(relx='0.5', rely='0.8', anchor='n')
 new_password_copy_button = tk.Button(main_frame, text='Copy', fg='white', bg='grey25', command=copy_new_password_button_command)
-new_password_copy_button.place(relx='0.75', rely='0.69', anchor='n')
+new_password_copy_button.place(relx='0.75', rely='0.79', anchor='n')
 
 
 goto_frame(login_frame)
