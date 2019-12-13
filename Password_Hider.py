@@ -1,5 +1,5 @@
 import tkinter as tk
-import pyperclip
+#import pyperclip
 import hashlib
 
 user_seperator = "    "
@@ -95,7 +95,7 @@ class File_Reader:
         self.url = url
 
     def read_file_data(self):
-        file = open(self.url, 'r', encoding='utf-8')
+        file = open(self.url, 'r')
         #contents = base64.b64decode(file.read().encode('utf-8')).decode('utf-8')
         contents = file.read()
         #print(contents)
@@ -104,7 +104,7 @@ class File_Reader:
         return contents
 
     def write_file_data(self, data):
-        file = open(self.url, 'w', encoding='utf-8')
+        file = open(self.url, 'w')
         #print(data, base64.b64encode(data))
         #file.write(base64.b64encode(data.encode('utf-8')).decode('utf-8'))
         file.write(data)
@@ -112,7 +112,8 @@ class File_Reader:
 
     def append_file_data(self, data):
         contents = self.read_file_data()
-        file = open(self.url, 'w', encoding='utf-8')
+        #file = open(self.url, 'w', encoding='utf-8')
+        file = open(self.url, 'w')
         if len(contents) == 0:
             #file.write(base64.b64encode(data.encode('utf-8')).decode('utf-8'))
             file.write(data)
@@ -127,13 +128,19 @@ class User:
         self.username = username  # encrypted username
         self.password = password  # hashed password
         self.websites = websites  # list of website data lists
+        self.websites = [['facebook', '8', '.'], ['roblox']]
         if self.websites == []:
             self.websites = None
 
-    def new_password(self, website):
-        if website in self.websites:
-            pass
-        return hashlib.md5(self.username + self.password + website)
+    # def new_password(self, website):
+    #     if website in self.websites:
+    #         pass
+    #     return hashlib.md5(self.username + self.password + website)
+
+    def add_website(self, address, length=8, chars=None):
+        if self.websites == None:
+            self.websites = []
+        self.websites.append([address, length, chars])
 
     def get_username(self):
         return simple_decrypt(self.username)
@@ -148,13 +155,14 @@ class User:
         if self.websites is None:
             return str(simple_encrypt(self.username) + item_seperator + hashlib.md5(self.password.encode('utf-8')).hexdigest())
         else:
-            raw_website_data = "" # data in the websites as a string
-            for website in self.websites: # loops through the array containing the data for the websites
-                if len(website) == 1:
-                    raw_website_data += website
-                    print(website)
-
-            return str(simple_encrypt(self.username) + item_seperator + hashlib.md5(self.password.encode('utf-8')).hexdigest() + item_seperator)
+            raw_website_data = "[" # data in the websites as a string
+            if not len(self.websites) == 0:
+                for j in range(len(self.websites)): # loops through the array containing the data for the websites
+                    raw_website_data = raw_website_data + '[' + ", ".join(self.websites[j]) + ']'
+                    if j < len(self.websites)-1:
+                        raw_website_data += ', '
+            raw_website_data += "]"
+            return str(simple_encrypt(self.username) + item_seperator + hashlib.md5(self.password.encode('utf-8')).hexdigest() + item_seperator + raw_website_data)
             
 
 def get_users():
@@ -197,11 +205,17 @@ def get_users():
                 else:
                     websites.append(user[i])
             user = User(username, password, websites)
+            #print(user.encrypted_data())
             output.append(User(username, password, websites))
         return output
     else:
         return []
 
+
+def update_user_data(username):
+    for i in range(len(users)):
+        if username == user.username:
+            users[i] = current_user
 
 def simple_encrypt(x):
     x = list(str(x))
@@ -253,7 +267,7 @@ def login_button():
             break
 
     # remove this later
-    #goto_frame(main_frame)
+    # goto_frame(main_frame)
 
 
 def register_button():
@@ -270,7 +284,7 @@ def register_button():
     elif password  == '':
         register_frame.registermessagelabel.config(text='Please input a password', fg='white')
     else:
-        register_frame.registermessagelabel.config(text='user already exists', fg='grey25')
+        register_frame.registermessagelabel.config(text='user )already exists', fg='grey25')
         for user in users:
             #print(simple_decrypt(user.username), username, user.password, hashlib.md5(password.encode('utf-8')).hexdigest())
             if simple_decrypt(user.username) == username:
@@ -282,23 +296,40 @@ def register_button():
         users.append(current_user)
         goto_frame(main_frame)
         text_file.append_file_data(current_user.encrypted_data())
-        #print(current_user)
-        #print(current_user.encrypted_data())
 
-def create_login_button():
+
+def isint(number):
+    try:
+        int(number)
+        return True
+    except:
+        return False
+
+
+def create_login_button_command():
 
     username = current_user.get_username()
     website = url_box.get()
-    password = current_user.new_password(website)
-    print(username)
+    optimal_length = optimal_length_box.get()
+    if isint(optimal_length):
+        optimal_length = int(optimal_length)
+    else:
+        optimal_length = 8
+    optimal_characters = optimal_characters_box.get()
+    if website == "":
+        return
+    password = current_user.get_password()
+    print(hashlib.md5(username + website + password + optimal_characters).hexdigest()[0:optimal_length])
 
 
 def copy_username_button_command():
-    pyperclip.copy(username_box.get())
+    pass
+    #pyperclip.copy(username_box.get())
 
 
 def copy_new_password_button_command():
-    pyperclip.copy(new_password_box.get())
+    pass
+    #pyperclip.copy(new_password_box.get())
 
 
 printable_chars = []
@@ -309,9 +340,6 @@ file_contents = text_file.read_file_data()
 
 users = get_users() # All of the users in the text file
 current_user = None
-
-for i in users:
-    print(i)
 
 root = tk.Tk()
 width = 400
@@ -342,7 +370,7 @@ optimal_characters_label.place(relx='0.5', rely='0.4', anchor='n')
 optimal_characters_box = tk.Entry(main_frame)
 optimal_characters_box.place(relx='0.5', rely='0.45', anchor='n')
 
-create_login_button = tk.Button(main_frame, text='Create Login', fg='white', bg='grey25')
+create_login_button = tk.Button(main_frame, text='Create Login', fg='white', bg='grey25', command=create_login_button_command)
 create_login_button.place(relx='0.5', rely='0.55', anchor='n')
 
 username_box_label = tk.Label(main_frame, text='Username', fg='white', bg='grey25')
