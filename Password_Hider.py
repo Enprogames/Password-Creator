@@ -1,13 +1,14 @@
 import tkinter as tk
 #import pyperclip
 import hashlib
+import random
 
 user_seperator = "    "
 item_seperator = ", "
 
 class Login_Frame(tk.Frame):
 
-    def __init__(self, parent, login_function, goto_register_function, width=600, height=400):
+    def __init__(self, parent, login_function, goto_register_function, skip_login_function, width=600, height=400):
         self.width = width
         self.height = height
         tk.Frame.__init__(self, parent, width=width, height=height, bg="grey25")
@@ -33,10 +34,13 @@ class Login_Frame(tk.Frame):
         self.passwordbox.place(relx=.5, rely=.65, anchor="center")
 
         self.changetoregisterbutton = tk.Button(self, text="register", font=('consolas', 10, 'bold'), bg="white", fg="black", command=goto_register_function)
-        self.changetoregisterbutton.place(relx=.43, rely=.85, anchor="center")
+        self.changetoregisterbutton.place(relx=.43, rely=.75, anchor="center")
 
         self.loginbutton = tk.Button(self, text="login", font=('consolas', 10, 'bold'), bg="white", fg="black", command=login_function)
-        self.loginbutton.place(relx=.58, rely=.85, anchor="center")
+        self.loginbutton.place(relx=.58, rely=.75, anchor="center")
+
+        self.no_loginbutton = tk.Button(self, text="Enter Without Account", font=('consolas', 10, 'bold'), bg="white", fg="black", command=skip_login_function)
+        self.no_loginbutton.place(relx=.5, rely=.85, anchor="center")
 
         self.usernamebox.insert(0, "xXBroccoliLoverXx")
         self.passwordbox.insert(0, "p2ssw0rd1")
@@ -214,7 +218,7 @@ def get_users():
 
 def update_user_data(username):
     for i in range(len(users)):
-        if username == user.username:
+        if username == users[i].username:
             users[i] = current_user
 
 def simple_encrypt(x):
@@ -284,7 +288,7 @@ def register_button():
     elif password  == '':
         register_frame.registermessagelabel.config(text='Please input a password', fg='white')
     else:
-        register_frame.registermessagelabel.config(text='user )already exists', fg='grey25')
+        register_frame.registermessagelabel.config(text='User Already Exists', fg='grey25')
         for user in users:
             #print(simple_decrypt(user.username), username, user.password, hashlib.md5(password.encode('utf-8')).hexdigest())
             if simple_decrypt(user.username) == username:
@@ -295,7 +299,7 @@ def register_button():
         current_user = User(username, password)
         users.append(current_user)
         goto_frame(main_frame)
-        text_file.append_file_data(current_user.encrypted_data())
+        user_file.append_file_data(current_user.encrypted_data())
 
 
 def isint(number):
@@ -308,7 +312,6 @@ def isint(number):
 
 def create_login_button_command():
 
-    username = current_user.get_username()
     website = url_box.get()
     optimal_length = optimal_length_box.get()
     if isint(optimal_length):
@@ -318,8 +321,21 @@ def create_login_button_command():
     optimal_characters = optimal_characters_box.get()
     if website == "":
         return
-    password = current_user.get_password()
-    print(hashlib.md5(username + website + password + optimal_characters).hexdigest()[0:optimal_length])
+
+    if not current_user == None:
+        username = current_user.get_username()
+        password = current_user.get_password()
+        username_box.delete(0, 'end')
+        username_box.insert(0, username)
+        new_password_box.delete(0, 'end')
+        new_password_box.insert(0,hashlib.md5(username + website + password).hexdigest()[0:optimal_length-len(optimal_characters)] + optimal_characters)
+    else:
+        username = random.choice(adjectives) + '_' + random.choice(nouns) + str(random.randint(0, 999))
+        password = hashlib.md5(username + website).hexdigest()[0:optimal_length-len(optimal_characters)] + optimal_characters
+        username_box.delete(0, 'end')
+        username_box.insert(0, username)
+        new_password_box.delete(0, 'end')
+        new_password_box.insert(0,hashlib.md5(username + website + password).hexdigest()[0:optimal_length-len(optimal_characters)] + optimal_characters)
 
 
 def copy_username_button_command():
@@ -335,8 +351,11 @@ def copy_new_password_button_command():
 printable_chars = []
 [printable_chars.append(chr(i)) for i in range(0,128)]
 
-text_file = File_Reader('text.txt')
-file_contents = text_file.read_file_data()
+user_file = File_Reader('text.txt')
+file_contents = user_file.read_file_data()
+adjectives = (File_Reader('english-adjectives.txt').read_file_data()).split('\n')
+nouns = (File_Reader('words_alpha.txt').read_file_data()).split('\n')
+nouns = [noun[0:-1] for noun in nouns]
 
 users = get_users() # All of the users in the text file
 current_user = None
@@ -347,7 +366,7 @@ height = 400
 root.geometry("{}x{}".format(width, height))
 root.title("Password Hider")
 
-login_frame = Login_Frame(root, login_button, lambda: goto_frame(register_frame), width, height)
+login_frame = Login_Frame(root, login_button, lambda: goto_frame(register_frame), lambda:goto_frame(main_frame), width, height)
 register_frame = Register_Frame(root, register_button, lambda: goto_frame(login_frame), width, height)
 
 comic_sans=('Comic Sans MS', 12, 'bold italic')
