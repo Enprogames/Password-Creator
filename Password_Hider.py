@@ -244,6 +244,12 @@ def simple_decrypt(x):
 
 
 def goto_frame(frame):
+    global current_user
+    if not frame == main_frame:
+        current_user = None
+        websites_menu.place_forget()
+        add_website_button.place_forget()
+        remove_website_button.place_forget()
     login_frame.pack_forget()
     register_frame.pack_forget()
     main_frame.pack_forget()
@@ -268,7 +274,11 @@ def login_button():
             login_frame.loginmessageLabel.config(fg='grey25')
             current_user = user
             goto_frame(main_frame)
+            websites_menu.place(relx='0.7', rely='0.45', anchor='n')
+            add_website_button.place(relx='0.7', rely='0.55', anchor='n')
+            remove_website_button.place(relx='0.8', rely='0.65', anchor='n')
             break
+
 
     # remove this later
     # goto_frame(main_frame)
@@ -299,6 +309,9 @@ def register_button():
         current_user = User(username, password)
         users.append(current_user)
         goto_frame(main_frame)
+        websites_menu.place(relx='0.7', rely='0.45', anchor='n')
+        add_website_button.place(relx='0.7', rely='0.55', anchor='n')
+        remove_website_button.place(relx='0.8', rely='0.65', anchor='n')
         user_file.append_file_data(current_user.encrypted_data())
 
 
@@ -328,7 +341,7 @@ def create_login_button_command():
         username_box.delete(0, 'end')
         username_box.insert(0, username)
         new_password_box.delete(0, 'end')
-        new_password_box.insert(0,hashlib.md5(username + website + password).hexdigest()[0:optimal_length-len(optimal_characters)] + optimal_characters)
+        new_password_box.insert(0, hashlib.md5(username + website + password).hexdigest()[0:optimal_length-len(optimal_characters)] + optimal_characters)
     else:
         username = random.choice(adjectives) + '_' + random.choice(nouns) + str(random.randint(0, 999))
         password = hashlib.md5(username + website).hexdigest()[0:optimal_length-len(optimal_characters)] + optimal_characters
@@ -347,6 +360,22 @@ def copy_new_password_button_command():
     pass
     #pyperclip.copy(new_password_box.get())
 
+def store_website():
+    if not current_user == None:
+        website = url_box.get()
+        optimal_length = optimal_length_box.get()
+        if isint(optimal_length):
+            optimal_length = int(optimal_length)
+        else:
+            optimal_length = 8
+        optimal_characters = optimal_characters_box.get()
+        if website == "":
+            return
+        current_user.add_website(website, optimal_length, optimal_characters)
+
+def remove_website():
+    if not current_user == None:
+        pass
 
 printable_chars = []
 [printable_chars.append(chr(i)) for i in range(0,128)]
@@ -365,6 +394,7 @@ width = 400
 height = 400
 root.geometry("{}x{}".format(width, height))
 root.title("Password Hider")
+root.resizable(0, 0)
 
 login_frame = Login_Frame(root, login_button, lambda: goto_frame(register_frame), lambda:goto_frame(main_frame), width, height)
 register_frame = Register_Frame(root, register_button, lambda: goto_frame(login_frame), width, height)
@@ -378,6 +408,9 @@ url_box_label = tk.Label(main_frame, text="URL", fg='white', bg='grey25')
 url_box_label.place(relx='0.5', rely='0.2', anchor='n')
 url_box = tk.Entry(main_frame)
 url_box.place(relx='0.5', rely='0.25', anchor='n')
+
+saved_websites_menu = tk.Menu(main_frame)
+#saved_websites_menu.place(relx=0.75, rely=0.25, anchor='n')
 
 optimal_length_label = tk.Label(main_frame, text="Optimal Password Length", fg='white', bg='grey25')
 optimal_length_label.place(relx='0.5', rely='0.3', anchor='n')
@@ -406,6 +439,9 @@ new_password_box.place(relx='0.5', rely='0.8', anchor='n')
 new_password_copy_button = tk.Button(main_frame, text='Copy', fg='white', bg='grey25', command=copy_new_password_button_command)
 new_password_copy_button.place(relx='0.75', rely='0.79', anchor='n')
 
+websites_menu = tk.OptionMenu(main_frame, tk.StringVar(), *['clubpenguin.com'], command=create_login_button_command)
+add_website_button = tk.Button(main_frame, text='Store Website', command=store_website)
+remove_website_button = tk.Button(main_frame, text='Remove Website', command=remove_website)
 
 goto_frame(login_frame)
 
